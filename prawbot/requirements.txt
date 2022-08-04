@@ -1,3 +1,4 @@
 python-dotenv
 praw
 boto3
+google

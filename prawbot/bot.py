@@ -1,9 +1,13 @@
-from datetime import date, datetime
-from turtle import down
-import praw
-import settings
-import boto3
 import json
+import praw
+import time
+
+from prawcore.exceptions import ServerError
+from decimal import Decimal
+
+import settings
+from aws import save_csv_to_s3, save_to_dynamo
+
 
 def extract_info(obj) -> dict:
     """Extracts info generically from praw instances
@@ -23,7 +27,8 @@ def extract_info(obj) -> dict:
 
 class RedditDownloader:
 
-    def __init__(self, subs: list = None, sub_limit: int = 100) -> None:
+    def __init__(self, subs: list = None, sub_limit: int = 100, 
+                 post_limit: int = 50) -> None:
 
         self.reddit = praw.Reddit(
             client_id=settings.REDDIT_CLIENT_ID,
@@ -52,19 +57,26 @@ class RedditDownloader:
                 " or a string containing a single subreddit"
             )
 
+        print(f"Getting data from subs {self.subs}")
         self.sub_limit = len(self.subs)
+        self.post_limit = post_limit
 
     def pull_data(self):
 
         for subreddit in self.subs:
-            for _ in range(3):  # Retry
+            for i in range(1, 4):  # Retry
                 try:
-                    self.pull_sub_data(subreddit)
-                except Exception:
+                    self._pull_sub_data(subreddit)
+                except praw.exceptions.RedditAPIException as e:
+                    print(e)
                     continue
+                except ServerError:
+                    print("Got Server Error: Trying again shortly")
+                    time.sleep(60*(i*2))
                 break
+        self._normalize_data()
 
-    def pull_sub_data(self, subreddit):
+    def _pull_sub_data(self, subreddit):
 
         # In the event of a http failure, extend these once everything is done
         # Don't want the retry to add duplicate items
@@ -82,54 +94,125 @@ class RedditDownloader:
         sub_data.append(sub_info)
 
         # For each submission in that top sub
-        for post in subreddit.top():
+        top_posts = subreddit.hot(limit=self.post_limit)
+        for i, post in enumerate(top_posts):
+            print(f"\tOn post {i} of {self.post_limit}")
 
             # Extract submission info
             post_info = extract_info(post)
             post_data.append(post_info)
 
             # Same for comments
+            num_comments = 0
             for comment in post.comments:
+                num_comments += 1
                 comment_info = extract_info(comment)
+                comment_info['post_title'] = post_info['title']
+                if not comment_info.get("body"):
+                    continue
                 comment_data.append(comment_info)
+                
+            print(f"\t\tGathered {num_comments} comments from post")
 
         # Move them all at once, no errors occurred, we got everything
         self.sub_data.extend(sub_data)
         self.post_data.extend(post_data)
         self.comment_data.extend(comment_data)
 
-    def save_to_s3(self):
-        """Saves the file to s3, appends timestamp, casts to string
-
-        Args:
-            contents (list): Contents of the file
-            filename (str): Core filename, will get timestamp
+    def _normalize_data(self):
+        self._normalize_comments()
+        self._normalize_posts()
+        self._normalize_subs()
+        
+    def _normalize_comments(self):
         """
+        Comments: add keys and null values to those without the key
+        """
+        keys = [c.keys() for c in self.comment_data]
+        keys = set([item for sublist in keys for item in sublist])
+        normalized = []
+        for comment in self.comment_data:
 
-        def partition_name(name):
-            now = datetime.now()
-            year, month, day = now.year, now.month, now.day
-            timestamp = str(now.time())
-            path = f"{year}/{month}/{day}/{name}_{timestamp}.json"
-            return path
+            comment["comment_id"] = comment["id"]            
 
-        #Creating Session With Boto3.
-        session = boto3.Session(
-            aws_access_key_id=settings.AWS_ACCESS_KEY,
-            aws_secret_access_key=settings.AWS_SECRET_KEY
-        )
-        #Creating S3 Resource From the Session.
-        s3 = session.resource('s3')
+            # Add attributes if not there
+            for key in keys:
+                if key not in comment.keys():
+                    comment[key] = None
+            
+            # Dynamo db wants decimal, not float
+            for k,v in comment.items():
+                if isinstance(v, float):
+                    comment[k] = Decimal(f"{v}")
+                
+            normalized.append(comment)
+        
+        self.comment_data = normalized
 
-        obj = s3.Object(settings.S3_BUCKET_NAME, partition_name("subs"))
-        obj.put(Body=json.dumps(self.sub_data))
+    def _normalize_posts(self):
+        
+        normalized = []
 
-        obj = s3.Object(settings.S3_BUCKET_NAME, partition_name("posts"))
-        obj.put(Body=json.dumps(self.post_data))
+        for post in self.post_data:
 
-        obj = s3.Object(settings.S3_BUCKET_NAME, partition_name("comments"))
-        obj.put(Body=json.dumps(self.comment_data))
+            post['post_id'] = post['id']
 
-downloader = RedditDownloader(sub_limit=3)
-downloader.pull_data()
-downloader.save_to_s3()
+            # Dynamo db wants decimal, not float
+            for k,v in post.items():
+                if isinstance(v, float):
+                    post[k] = Decimal(f"{v}")
+            
+            normalized.append(post)
+        
+        self.post_data = normalized
+
+    def _normalize_subs(self):
+        
+        normalized = []
+
+        for sub in self.sub_data:
+
+            sub['sub_id'] = sub['id']
+
+            # Dynamo db wants decimal, not float
+            for k,v in sub.items():
+                if isinstance(v, float):
+                    sub[k] = Decimal(f"{v}")
+            
+            normalized.append(sub)
+        
+        self.sub_data = normalized
+    
+if __name__=='__main__':
+
+    downloader = RedditDownloader(sub_limit=50)
+    downloader.pull_data()
+
+    save_csv_to_s3(
+        data=downloader.comment_data, 
+        path='comments', 
+        date_partition=True
+    )
+    save_csv_to_s3(
+        data=downloader.post_data, 
+        path='posts', 
+        date_partition=True
+    )
+    save_csv_to_s3(
+        data=downloader.sub_data, 
+        path='subs', 
+        date_partition=True
+    )
+
+    save_to_dynamo(
+        data=downloader.comment_data, 
+        table_name='reddit_comments'
+    )
+    save_to_dynamo(
+        data=downloader.post_data, 
+        table_name='reddit_posts'
+    )
+    save_to_dynamo(
+        data=downloader.sub_data, 
+        table_name='reddit_subs'
+    )
