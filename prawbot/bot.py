@@ -153,9 +153,16 @@ class RedditDownloader:
         
         normalized = []
 
+        keys = [c.keys() for c in self.post_data]
+        keys = set([item for sublist in keys for item in sublist])
         for post in self.post_data:
 
             post['post_id'] = post['id']
+
+            # Add attributes if not there
+            for key in keys:
+                if key not in post.keys():
+                    post[key] = None
 
             # Dynamo db wants decimal, not float
             for k,v in post.items():
@@ -170,9 +177,17 @@ class RedditDownloader:
         
         normalized = []
 
+        keys = [c.keys() for c in self.sub_data]
+        keys = set([item for sublist in keys for item in sublist])
+
         for sub in self.sub_data:
 
             sub['sub_id'] = sub['id']
+
+            # Add attributes if not there
+            for key in keys:
+                if key not in sub.keys():
+                    sub[key] = None
 
             # Dynamo db wants decimal, not float
             for k,v in sub.items():

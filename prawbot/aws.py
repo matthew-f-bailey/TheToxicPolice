@@ -44,9 +44,13 @@ def save_csv_to_s3(
     s3 = session.resource('s3')
 
     # Write csv content to string buffer to save
-    headers = list(data[0].keys())
+    headers = set()
+    for item in data:
+        for key in item.keys():
+            headers.add(key)
+
     output = io.StringIO()
-    writer = csv.DictWriter(output, headers, quoting=csv.QUOTE_ALL)
+    writer = csv.DictWriter(output, list(headers), quoting=csv.QUOTE_ALL)
     writer.writerow({k:k for k in headers})
     writer.writerows(data)
 
