@@ -16,6 +16,7 @@ def get_markdown_file(filename: str) -> str:
         str: contents of markdown file
     """
     pathname = f'{MARKDOWN_PATH}{filename}.md'
+    pathname = pathname.replace('\\', '/')
     try:
         with open(pathname, 'r') as fh:
             content = fh.read()
