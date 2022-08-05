@@ -2,12 +2,14 @@ import boto3
 import csv
 import json
 import io
+import time
 
 from typing import List
 from datetime import datetime
 
 import settings
 from boto3.dynamodb.types import TypeSerializer
+from boto3.dynamodb.conditions import Key
 
 
 session = boto3.Session(
@@ -81,4 +83,19 @@ def save_to_dynamo(data: List[dict], table_name: str):
 
 if __name__=='__main__':
     #Creating Session With Boto3.
-    pass
+    db = session.resource('dynamodb', region_name='us-east-1')
+    table = db.Table('reddit_comments')
+    for _ in range(10):
+        if not table.global_secondary_indexes or table.global_secondary_indexes[0]['IndexStatus'] != 'ACTIVE':
+            print('Waiting for index backfill')
+            time.sleep(3)
+            table.reload()
+            continue
+        table.reload()
+        break
+    resp = table.query(
+        IndexName='subreddit_name_prefixed-index',
+        KeyConditionExpression=Key('subreddit_name_prefixed').eq('r/formula1')
+    )
+    for item in resp['Items']:
+        print(f'{item.get("subreddit_name_prefixed")} - {item.get("body")}')

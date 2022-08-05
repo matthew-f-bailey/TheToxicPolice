@@ -2,3 +2,5 @@
 .env
 notes.txt
 *.pyc
+
+*.log
