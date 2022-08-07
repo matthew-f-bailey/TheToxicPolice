@@ -37,7 +37,7 @@ def _mock_toxicness(items: list) -> list:
     for item in items:
         for label in labels:
             # Get random percentage for each label
-            percent = random.gauss(0.3, 0.25)
+            percent = random.normalvariate(0.3, 0.2)
             if percent < 0:
                 percent = 0
             if percent > 1:
@@ -97,7 +97,7 @@ def query_comments_by_subreddit(subreddit: str) -> pd.DataFrame:
     items = resp['Items']
     items = _post_process_comments(items)
     logger.info(f'Dyanmo comment query to subreddit of {subreddit} returned {len(items)} results')
-    return df
+    return items
 
 
 ##################
