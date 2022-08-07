@@ -20,13 +20,13 @@ def subreddit():
     The core component, presents needed interface and options and buttons
     to update the datat to be displayed
     """
+
     sub_names = sorted([x['display_name_prefixed'] for x in SUBS])
     return \
         Div(id='subreddit_view', children=[
-            Dropdown(sub_names, sub_names[0], id='sub_dropdown'),
-            Div(id='subreddit_info', children=[]),
-            Div(id='subreddit_content', children=[
-            ])
+                Dropdown(sub_names, sub_names[0], id='sub_dropdown'),
+                Div(id='subreddit_info', children=[]),
+                Div(id='subreddit_content', children=[])
         ])
 
 @callback(
@@ -54,6 +54,7 @@ def update_content(subreddit_name):
     df = pd.DataFrame(comment_data)
     children = []
     children.append(get_top_toxic_cards(comment_data))
+    children.append(create_toxic_count_hist(df))
     children.append(create_toxic_count_hist(df))
     return children
 
