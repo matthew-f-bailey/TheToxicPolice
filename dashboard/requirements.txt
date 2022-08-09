@@ -11,6 +11,7 @@ dash-bootstrap-components==1.2.1
 dash-core-components==2.0.0
 dash-html-components==2.0.0
 dash-table==5.0.0
+dash-bootstrap-components==1.2.1
 debugpy==1.6.2
 decorator==5.1.1
 entrypoints==0.4
@@ -49,7 +50,6 @@ pyrsistent==0.18.1
 python-dateutil==2.8.2
 python-dotenv==0.20.0
 pytz==2022.1
-pywin32==304
 pyzmq==23.2.0
 s3transfer==0.6.0
 six==1.16.0

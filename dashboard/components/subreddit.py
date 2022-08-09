@@ -53,15 +53,36 @@ def update_content(subreddit_name):
     comment_data = query_comments_by_subreddit(subreddit_name)
     df = pd.DataFrame(comment_data)
     children = []
-    children.append(get_top_toxic_cards(comment_data))
-    children.append(create_toxic_count_hist(df))
-    children.append(create_toxic_count_hist(df))
+    
+    # Top Row
+    top_row = dbc.Row(children=[])
+    top_row.children.append(
+        dbc.Col(get_top_toxic_cards(comment_data))
+    )
+    top_row.children.append(
+        dbc.Col(create_toxic_count_hist(df))
+    )
+    children.append(top_row)
+
+    # Second row
+    second_row = dbc.Row(children=[])
+    second_row.children.append(
+        dbc.Col(create_toxic_count_hist(df))
+    )
+    second_row.children.append(
+        dbc.Col(create_toxic_count_hist(df))
+    )
+    second_row.children.append(
+        dbc.Col(create_toxic_count_hist(df))
+    )
+    children.append(second_row)
+    
     return children
 
 ##################################
 ##### Update helper function #####
 ##################################
-def get_top_toxic_cards(comment_data: list) -> dbc.Row:
+def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> dbc.Row:
     """Grab the top toxic comments for the subreddit
 
     Args:
@@ -93,11 +114,11 @@ def get_top_toxic_cards(comment_data: list) -> dbc.Row:
                         ]
                     ),
                     dbc.CardFooter(f"Commented on post: {comment['post_title']}"),
-                ]),
-                style={"width": "18rem"}
+                ], style={"width": "auto", "height": "100%"}),
+                
             )
         )
-        if i==4:
+        if i==num_cards-1:
             break
     return cards
 
