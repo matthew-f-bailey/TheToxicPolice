@@ -24,9 +24,9 @@ def subreddit():
     sub_names = sorted([x['display_name_prefixed'] for x in SUBS])
     return \
         Div(id='subreddit_view', children=[
-                Dropdown(sub_names, sub_names[0], id='sub_dropdown'),
-                Div(id='subreddit_info', children=[]),
-                Div(id='subreddit_content', children=[])
+            Dropdown(sub_names, sub_names[0], id='sub_dropdown'),
+            Div(id='subreddit_info', children=[]),
+            Div(id='subreddit_content', children=[])
         ])
 
 @callback(
@@ -53,36 +53,49 @@ def update_content(subreddit_name):
     comment_data = query_comments_by_subreddit(subreddit_name)
     df = pd.DataFrame(comment_data)
     children = []
-    
+
     # Top Row
     top_row = dbc.Row(children=[])
     top_row.children.append(
-        dbc.Col(get_top_toxic_cards(comment_data))
+        dbc.Col(get_top_toxic_cards(comment_data), width=6)
     )
     top_row.children.append(
-        dbc.Col(create_toxic_count_hist(df))
+        dbc.Col(create_toxic_count_hist(df), width=6)
     )
     children.append(top_row)
 
     # Second row
     second_row = dbc.Row(children=[])
     second_row.children.append(
-        dbc.Col(create_toxic_count_hist(df))
+        dbc.Col(create_toxic_count_hist(df), width=4)
     )
     second_row.children.append(
-        dbc.Col(create_toxic_count_hist(df))
+        dbc.Col(create_toxic_count_hist(df), width=4)
     )
     second_row.children.append(
-        dbc.Col(create_toxic_count_hist(df))
+        dbc.Col(create_toxic_count_hist(df), width=4)
     )
     children.append(second_row)
-    
+
+    # Third row
+    third_row = dbc.Row(children=[])
+    third_row.children.append(
+        dbc.Col(create_toxic_count_hist(df), width=4)
+    )
+    third_row.children.append(
+        dbc.Col(create_toxic_count_hist(df), width=4)
+    )
+    third_row.children.append(
+        dbc.Col(create_toxic_count_hist(df), width=4)
+    )
+    children.append(third_row)
+
     return children
 
 ##################################
 ##### Update helper function #####
 ##################################
-def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> dbc.Row:
+def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> list:
     """Grab the top toxic comments for the subreddit
 
     Args:
@@ -115,7 +128,6 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> dbc.Row:
                     ),
                     dbc.CardFooter(f"Commented on post: {comment['post_title']}"),
                 ], style={"width": "auto", "height": "100%"}),
-                
             )
         )
         if i==num_cards-1:
