@@ -52,6 +52,7 @@ def update_content(subreddit_name):
     """
     comment_data = query_comments_by_subreddit(subreddit_name)
     df = pd.DataFrame(comment_data)
+
     children = []
 
     # Top Row
@@ -91,7 +92,6 @@ def update_content(subreddit_name):
     children.append(third_row)
 
     return children
-
 ##################################
 ##### Update helper function #####
 ##################################
