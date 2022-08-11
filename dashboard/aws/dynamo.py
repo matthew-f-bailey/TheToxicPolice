@@ -112,11 +112,39 @@ def get_all_subs():
         IndexName='GetAllFollowableSubs',
         KeyConditionExpression=Key('subreddit_type').eq('public')
     )
-    # print(resp)
+    items = resp['Items']
+
+    return items
+
+##################
+###### POSTS #####
+##################
+def get_post_by_id(post_id: str = None, comment: dict = None):
+    
+    # Validate params
+    if not any([post_id, comment]) or all([post_id, comment]):
+        raise AttributeError("Must pass either post_id or full comment")
+
+    # Get parent id from comment
+    if comment is not None:
+        post_id = comment['parent_id']
+
+    # Remove optional prefix
+    if '_' in post_id:
+        post_id = post_id.split('_')[1]
+     
+    logger.info(f'Looking up post of {post_id}')
+    # Query
+    table = db.Table('reddit_posts')
+    _wait_for_table_indexes(table)
+    resp = table.query(
+        KeyConditionExpression=Key('post_id').eq(post_id)
+    )
     items = resp['Items']
 
     return items
 
 if __name__=='__main__':
-    # print(query_comments_by_subreddit('r/funny'))
-    print(get_all_subs())
+    comments = query_comments_by_subreddit('r/funny')
+    print(get_post_by_id(comment=comments[0]))
+    #print(get_all_subs())
