@@ -89,7 +89,7 @@ def update_content(subreddit_name: str):
     # Second row
     second_row = dbc.Row(children=[], class_name='h-50')
     second_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=4)
+        dbc.Col(create_pie_toxicity_type(df), width=4)
     )
     second_row.children.append(
         dbc.Col(create_toxic_count_bar(df), width=4)
@@ -180,8 +180,22 @@ def create_toxic_count_bar(comment_df: pd.DataFrame) -> dcc.Graph:
     )
     fig.update_layout(
         showlegend=False,
-        height=200,
-        margin=dict(l=10, r=10, t=10, b=20),
+        height=200
+    )
+    return  dbc.Card([dbc.CardBody([
+        dcc.Graph(figure=fig)
+    ])])
+
+def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
+
+    totals = comment_df[['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']].sum()
+    totals.rename('Count', inplace=True)
+    totals.index = ['Toxic', 'Severe Toxic', 'Obscene', 'Threat', 'Insult', 'Identity Hate']
+    fig = px.pie(
+        totals,
+        title="Breakdown of toxic comments by type",
+        values="Count",
+        names=totals.index
     )
     return  dbc.Card([dbc.CardBody([
         dcc.Graph(figure=fig)
