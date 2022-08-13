@@ -27,7 +27,7 @@ def extract_info(obj) -> dict:
 
 class RedditDownloader:
 
-    def __init__(self, subs: list = None, sub_limit: int = 100, 
+    def __init__(self, subs: list = None, sub_limit: int = 100,
                  post_limit: int = 50) -> None:
 
         self.reddit = praw.Reddit(
@@ -111,7 +111,7 @@ class RedditDownloader:
                 if not comment_info.get("body"):
                     continue
                 comment_data.append(comment_info)
-                
+
             print(f"\t\tGathered {num_comments} comments from post")
 
         # Move them all at once, no errors occurred, we got everything
@@ -123,7 +123,7 @@ class RedditDownloader:
         self._normalize_comments()
         self._normalize_posts()
         self._normalize_subs()
-        
+
     def _normalize_comments(self):
         """
         Comments: add keys and null values to those without the key
@@ -133,24 +133,24 @@ class RedditDownloader:
         normalized = []
         for comment in self.comment_data:
 
-            comment["comment_id"] = comment["id"]            
+            comment["comment_id"] = comment["id"]
 
             # Add attributes if not there
             for key in keys:
                 if key not in comment.keys():
                     comment[key] = None
-            
+
             # Dynamo db wants decimal, not float
             for k,v in comment.items():
                 if isinstance(v, float):
                     comment[k] = Decimal(f"{v}")
-                
+
             normalized.append(comment)
-        
+
         self.comment_data = normalized
 
     def _normalize_posts(self):
-        
+
         normalized = []
 
         keys = [c.keys() for c in self.post_data]
@@ -168,13 +168,13 @@ class RedditDownloader:
             for k,v in post.items():
                 if isinstance(v, float):
                     post[k] = Decimal(f"{v}")
-            
+
             normalized.append(post)
-        
+
         self.post_data = normalized
 
     def _normalize_subs(self):
-        
+
         normalized = []
 
         keys = [c.keys() for c in self.sub_data]
@@ -193,41 +193,41 @@ class RedditDownloader:
             for k,v in sub.items():
                 if isinstance(v, float):
                     sub[k] = Decimal(f"{v}")
-            
+
             normalized.append(sub)
-        
+
         self.sub_data = normalized
-    
+
 if __name__=='__main__':
 
-    downloader = RedditDownloader(sub_limit=50)
+    downloader = RedditDownloader(sub_limit=3)
     downloader.pull_data()
 
     save_csv_to_s3(
-        data=downloader.comment_data, 
-        path='comments', 
+        data=downloader.comment_data,
+        path='comments',
         date_partition=True
     )
     save_csv_to_s3(
-        data=downloader.post_data, 
-        path='posts', 
+        data=downloader.post_data,
+        path='posts',
         date_partition=True
     )
     save_csv_to_s3(
-        data=downloader.sub_data, 
-        path='subs', 
+        data=downloader.sub_data,
+        path='subs',
         date_partition=True
     )
 
     save_to_dynamo(
-        data=downloader.comment_data, 
+        data=downloader.comment_data,
         table_name='reddit_comments'
     )
     save_to_dynamo(
-        data=downloader.post_data, 
+        data=downloader.post_data,
         table_name='reddit_posts'
     )
     save_to_dynamo(
-        data=downloader.sub_data, 
+        data=downloader.sub_data,
         table_name='reddit_subs'
     )

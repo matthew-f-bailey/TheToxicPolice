@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 import random
 import time
+from datetime import datetime
 
 from boto3.dynamodb.conditions import Key
 
@@ -99,6 +100,32 @@ def query_comments_by_subreddit(subreddit: str) -> pd.DataFrame:
     logger.info(f'Dyanmo comment query to subreddit of {subreddit} returned {len(items)} results')
     return items
 
+def query_comments_by_subreddit_past_day(subreddit: str) -> pd.DataFrame:
+    """Given a subreddit, return all the comments we have for it
+
+    Args:
+        subreddit (str): subreddit name including the r/ prefix
+
+    Returns:
+        pd.DataFrame: Dataframe containing the comments
+    """
+
+    today = round(datetime.timestamp(datetime.now()))
+    yesterday = round(today - 86400)
+
+    table = db.Table('reddit_comments')
+    _wait_for_table_indexes(table)
+    resp = table.query(
+        IndexName='GetAllSubredditCommentsCreateDate',
+        KeyConditionExpression=(
+            Key('subreddit_name_prefixed').eq(subreddit) &
+            Key('created').gt(yesterday)
+        )
+    )
+    items = resp['Items']
+    items = _post_process_comments(items)
+    logger.info(f'Dyanmo comment query to subreddit of {subreddit} returned {len(items)} results')
+    return items
 
 ##################
 ####### SUBS #####
@@ -120,7 +147,7 @@ def get_all_subs():
 ###### POSTS #####
 ##################
 def get_post_by_id(post_id: str = None, comment: dict = None):
-    
+
     # Validate params
     if not any([post_id, comment]) or all([post_id, comment]):
         raise AttributeError("Must pass either post_id or full comment")
@@ -132,7 +159,7 @@ def get_post_by_id(post_id: str = None, comment: dict = None):
     # Remove optional prefix
     if '_' in post_id:
         post_id = post_id.split('_')[1]
-     
+
     logger.info(f'Looking up post of {post_id}')
     # Query
     table = db.Table('reddit_posts')
@@ -144,7 +171,35 @@ def get_post_by_id(post_id: str = None, comment: dict = None):
 
     return items
 
+def query_posts_by_subreddit_past_day(subreddit: str) -> pd.DataFrame:
+    """Given a subreddit, return all the posts we have for it in past day
+
+    Args:
+        subreddit (str): subreddit name including the r/ prefix
+
+    Returns:
+        pd.DataFrame: Dataframe containing the posts
+    """
+
+    today = round(datetime.timestamp(datetime.now()))
+    yesterday = round(today - 86400)
+
+    table = db.Table('reddit_posts')
+    _wait_for_table_indexes(table)
+    resp = table.query(
+        IndexName='GetPostsBySubAfterDate',
+        KeyConditionExpression=(
+            Key('subreddit_name_prefixed').eq(subreddit) &
+            Key('created').gt(yesterday)
+        )
+    )
+    items = resp['Items']
+    logger.info(f'Total number of posts for {subreddit} in past day {len(items)}')
+    return items
+
+
 if __name__=='__main__':
-    comments = query_comments_by_subreddit('r/funny')
-    print(get_post_by_id(comment=comments[0]))
-    #print(get_all_subs())
+
+    print(
+        query_posts_by_subreddit_past_day('r/gaming')
+    )

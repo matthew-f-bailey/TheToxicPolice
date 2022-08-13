@@ -18,8 +18,8 @@ session = boto3.Session(
 )
 
 def save_csv_to_s3(
-    data: List[dict], 
-    path: str, 
+    data: List[dict],
+    path: str,
     date_partition: bool = False
 ):
     """Saves the file to s3, appends timestamp, casts to string
@@ -34,7 +34,7 @@ def save_csv_to_s3(
         year, month, day = now.year, now.month, now.day
         path = f"{year}/{month}/{day}/{name}.csv"
         return path
-    
+
     path_processor = date_partition_name if date_partition else lambda x: f'{x}.csv'
 
     #Creating Session With Boto3.
@@ -43,7 +43,7 @@ def save_csv_to_s3(
         aws_secret_access_key=settings.AWS_SECRET_KEY
     )
     #Creating S3 Resource From the Session.
-    s3 = session.resource('s3')
+    s3 = session.resource('s3', region_name='us-east-1')
 
     # Write csv content to string buffer to save
     headers = set()
@@ -59,7 +59,7 @@ def save_csv_to_s3(
     print(f"Saving {len(data)} records to bucket {settings.S3_BUCKET_NAME}")
 
     obj = s3.Object(
-        bucket_name=settings.S3_BUCKET_NAME, 
+        bucket_name=settings.S3_BUCKET_NAME,
         key=path_processor(path)
     )
     obj.put(Body=output.getvalue())
@@ -80,6 +80,7 @@ def save_to_dynamo(data: List[dict], table_name: str):
         except Exception as e:
             print(json.dumps(item, indent=3))
             raise e
+    print(f'Saved {len(data)} records to dynamo table {table_name}')
 
 if __name__=='__main__':
     #Creating Session With Boto3.
