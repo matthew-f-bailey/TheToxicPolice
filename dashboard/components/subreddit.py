@@ -126,7 +126,7 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> list:
         dbc.Row: Row of cards
     """
     toxic_comments = [x for x in comment_data if x['toxic'] > 0.7]
-    cards = dbc.Row(children=[])
+    cards = dbc.Row(children=[], class_name='h-100')
     for i, comment in  enumerate(toxic_comments):
 
         if len(comment['body']) >= 125:

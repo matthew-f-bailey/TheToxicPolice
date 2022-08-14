@@ -49,7 +49,7 @@ class RedditDownloader:
             self.subs = [self.reddit.subreddit(s) for s in subs]
 
         elif isinstance(subs, str):
-            self.subs = [self.reddit.subreddit(subs)]
+            self.subs = self.reddit.subreddits.search_by_name(subs, exact=True)
 
         else:
             raise TypeError(
@@ -90,7 +90,9 @@ class RedditDownloader:
         )
 
         # Extract top level sub info
+        desc = subreddit.description
         sub_info = extract_info(subreddit)
+        print(sub_info)
         sub_data.append(sub_info)
 
         # For each submission in that top sub
@@ -179,7 +181,6 @@ class RedditDownloader:
 
         keys = [c.keys() for c in self.sub_data]
         keys = set([item for sublist in keys for item in sublist])
-
         for sub in self.sub_data:
 
             sub['sub_id'] = sub['id']
@@ -200,7 +201,7 @@ class RedditDownloader:
 
 if __name__=='__main__':
 
-    downloader = RedditDownloader(sub_limit=3)
+    downloader = RedditDownloader(subs='AmItheAsshole')
     downloader.pull_data()
 
     save_csv_to_s3(
