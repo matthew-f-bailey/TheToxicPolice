@@ -18,6 +18,7 @@ from settings import PLOTLY_TEMPLATE
 logger = logging.getLogger(__name__)
 
 SUBS = get_all_subs()
+FILL_PARENT_BS_CLASS = 'h-100 mx-sm pb-sm'
 
 def subreddit():
     """
@@ -79,36 +80,36 @@ def update_content(subreddit_name: str):
     # Top Row
     top_row = dbc.Row(children=[], class_name='h-25')
     top_row.children.append(
-        dbc.Col(get_top_toxic_cards(comment_data), width=6)
+        dbc.Col(get_top_toxic_cards(comment_data), md=6, class_name=FILL_PARENT_BS_CLASS)
     )
     top_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=6)
+        dbc.Col(create_toxic_count_bar(df), md=6, class_name=FILL_PARENT_BS_CLASS)
     )
     children.append(top_row)
 
     # Second row
     second_row = dbc.Row(children=[], class_name='h-50')
     second_row.children.append(
-        dbc.Col(create_pie_toxicity_type(df), width=4)
+        dbc.Col(create_pie_toxicity_type(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     second_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=4)
+        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     second_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=4)
+        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     children.append(second_row)
 
     # Third row
     third_row = dbc.Row(children=[], class_name='h-25')
     third_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=4)
+        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     third_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=4)
+        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     third_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), width=4)
+        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     children.append(third_row)
     return (children, desc)
@@ -116,7 +117,7 @@ def update_content(subreddit_name: str):
 ##################################
 ##### Update helper functions ####
 ##################################
-def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> list:
+def get_top_toxic_cards(comment_data: list, num_cards:int = 3) -> list:
     """Grab the top toxic comments for the subreddit
 
     Args:
@@ -126,23 +127,22 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> list:
         dbc.Row: Row of cards
     """
     toxic_comments = [x for x in comment_data if x['toxic'] > 0.7]
-    cards = dbc.Row(children=[], class_name='h-100')
+    cards = dbc.Row(children=[], class_name=FILL_PARENT_BS_CLASS)
     for i, comment in  enumerate(toxic_comments):
 
-        if len(comment['body']) >= 125:
-            comment_body = f"{comment['body'][0:125]}..."
-        else:
-            comment_body = comment['body']
+        shrink_under = lambda s, num: s if len(s)<=num else s[0:num]
+
+        comment_body = shrink_under(comment['body'], 1000)
+        post_title = shrink_under(comment['post_title'], 1000)
 
         cards.children.append(
-            dbc.Col(
-                dbc.Card([
+            dbc.Col(class_name=FILL_PARENT_BS_CLASS, md=4, children=[
+                dbc.Card(children=[
                     dbc.CardHeader(f"Toxic probability: {comment['toxic']}", style={'backgroundColor': COLORS.DARK_BLUE, 'color': COLORS.WHITE}),
-                    dbc.CardBody(
-                        [
+                    dbc.CardBody(children=[
                             P(
                                 comment_body,
-                                className="card-text",
+                                className="card-text text-truncate",
                             ),
                             dbc.Badge(
                                 [A("Comment Link", href='https://www.reddit.com'+comment["permalink"], style={'color':COLORS.WHITE, 'text-decoration': 'none'})],
@@ -152,9 +152,11 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 4) -> list:
                             )
                         ]
                     ),
-                    dbc.CardFooter(f"Commented on post: {comment['post_title']}"),
+                    dbc.CardFooter(
+                        P(f"Commented on post: {post_title}", className='text-truncate')
+                    ),
                 ]),
-            )
+            ])
         )
         if i==num_cards-1:
             break
@@ -180,11 +182,11 @@ def create_toxic_count_bar(comment_df: pd.DataFrame) -> dcc.Graph:
     )
     fig.update_layout(
         showlegend=False,
-        height=200
+        autosize = True
     )
     return  dbc.Card([dbc.CardBody([
-        dcc.Graph(figure=fig)
-    ])])
+        dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
+    ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)
 
 def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
 
@@ -198,5 +200,5 @@ def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
         names=totals.index
     )
     return  dbc.Card([dbc.CardBody([
-        dcc.Graph(figure=fig)
-    ])])
+        dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
+    ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)

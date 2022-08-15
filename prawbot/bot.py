@@ -90,9 +90,8 @@ class RedditDownloader:
         )
 
         # Extract top level sub info
-        desc = subreddit.description
+        desc = subreddit.description # Access something - lazy loading
         sub_info = extract_info(subreddit)
-        print(sub_info)
         sub_data.append(sub_info)
 
         # For each submission in that top sub
