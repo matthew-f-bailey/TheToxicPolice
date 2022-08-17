@@ -2,7 +2,7 @@ import logging
 
 from dash import Input, Output, callback, clientside_callback
 from dash.dcc import Dropdown
-from dash.html import Div, P, H2, A
+from dash.html import Div, P, H1, H2, H5, A, I, Span
 from dash import dcc
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 SUBS = get_all_subs()
 FILL_PARENT_BS_CLASS = 'h-100 mx-sm pb-sm'
+TOXIC_THRESH = 0.6
 
 def subreddit():
     """
@@ -43,13 +44,15 @@ def get_sub_desc(subreddit_name):
     return dbc.Card([
         dbc.Row([
             dbc.Col([
-                H2([dbc.Badge(
-                    subreddit_name,
-                    color=COLORS.RED,
-                    text_color=COLORS.WHITE,
-                    className="border me-1",
-                    pill=True
-                )])
+                H2([
+                    dbc.Badge(
+                        subreddit_name,
+                        color=COLORS.RED,
+                        text_color=COLORS.WHITE,
+                        className="border me-1",
+                        pill=True
+                    )
+                ])
             ], width='auto'),
             dbc.Col([desc], width='auto')
         ])
@@ -80,10 +83,10 @@ def update_content(subreddit_name: str):
     # Top Row
     top_row = dbc.Row(children=[], class_name='h-25')
     top_row.children.append(
-        dbc.Col(get_top_toxic_cards(comment_data), md=6, class_name=FILL_PARENT_BS_CLASS)
+        dbc.Col(get_top_toxic_cards(comment_data), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     top_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), md=6, class_name=FILL_PARENT_BS_CLASS)
+        dbc.Col(get_toxic_count_cards(comment_data), md=8, class_name=FILL_PARENT_BS_CLASS)
     )
     children.append(top_row)
 
@@ -117,7 +120,7 @@ def update_content(subreddit_name: str):
 ##################################
 ##### Update helper functions ####
 ##################################
-def get_top_toxic_cards(comment_data: list, num_cards:int = 3) -> list:
+def get_top_toxic_cards(comment_data: list, num_cards:int = 1) -> list:
     """Grab the top toxic comments for the subreddit
 
     Args:
@@ -126,7 +129,7 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 3) -> list:
     Returns:
         dbc.Row: Row of cards
     """
-    toxic_comments = [x for x in comment_data if x['toxic'] > 0.7]
+    toxic_comments = [x for x in comment_data if x['toxic'] > TOXIC_THRESH]
     cards = dbc.Row(children=[], class_name=FILL_PARENT_BS_CLASS)
     for i, comment in  enumerate(toxic_comments):
 
@@ -136,9 +139,12 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 3) -> list:
         post_title = shrink_under(comment['post_title'], 1000)
 
         cards.children.append(
-            dbc.Col(class_name=FILL_PARENT_BS_CLASS, md=4, children=[
+            dbc.Col(class_name=FILL_PARENT_BS_CLASS, md=12, children=[
                 dbc.Card(children=[
-                    dbc.CardHeader(f"Toxic probability: {comment['toxic']}", style={'backgroundColor': COLORS.DARK_BLUE, 'color': COLORS.WHITE}),
+                    dbc.CardHeader(style={'backgroundColor': COLORS.DARK_BLUE, 'color': COLORS.WHITE}, children=[
+                        Span(f"Random Toxic Comment"),
+                        Span(f" (Toxic probability: {comment['toxic']})", style={'font-style': 'italic'})
+                    ]),
                     dbc.CardBody(children=[
                             P(
                                 comment_body,
@@ -161,6 +167,52 @@ def get_top_toxic_cards(comment_data: list, num_cards:int = 3) -> list:
         if i==num_cards-1:
             break
     return cards
+
+def get_toxic_count_cards(comment_data: list) -> list:
+
+    toxic, severe_toxic, obscene, threat, insult, identity_hate = [],[],[],[],[],[]
+    for comment in comment_data:
+        if comment['toxic'] > TOXIC_THRESH:
+            toxic.append(comment)
+        if comment['severe_toxic'] > TOXIC_THRESH:
+            severe_toxic.append(comment)
+        if comment['obscene'] > TOXIC_THRESH:
+            obscene.append(comment)
+        if comment['threat'] > TOXIC_THRESH:
+            threat.append(comment)
+        if comment['insult'] > TOXIC_THRESH:
+            insult.append(comment)
+        if comment['identity_hate'] > TOXIC_THRESH:
+            identity_hate.append(comment)
+
+    toxic_counts = {
+        'Toxic': [len(toxic), 'fas fa-skull-crossbones', 'red'],
+        'Severe Toxic': [len(severe_toxic), 'fa-solid fa-biohazard', 'green'],
+        'Obscene': [len(obscene), 'fa-solid fa-eye-slash', 'purple'],
+        'Threat': [len(threat), 'fa-solid fa-gun', 'black'],
+        'Insult': [len(insult), 'fa-solid fa-sad-cry', 'blue'],
+        'Identity Hate': [len(identity_hate), 'fa-solid fa-id-card', 'green'],
+    }
+    cards = dbc.Row(children=[], class_name=FILL_PARENT_BS_CLASS)
+    for label, count_icon in toxic_counts.items():
+        count = count_icon[0]
+        icon = count_icon[1]
+        color = count_icon[2]
+        cards.children.append(
+            dbc.Col(class_name=FILL_PARENT_BS_CLASS, children=[
+                dbc.Card(children=[
+                    dbc.CardBody(children=[
+                        H1(count, className='display-1'),
+                        Span([
+                            I(className=icon, style={'color': color}),
+                            Span(' '+label, style={'font-size': '18px'}),
+                        ], className='d-inline')
+                    ], class_name=f'text-center {FILL_PARENT_BS_CLASS}'),
+                ], class_name=FILL_PARENT_BS_CLASS),
+            ])
+        )
+    return cards
+
 
 def create_toxic_count_bar(comment_df: pd.DataFrame) -> dcc.Graph:
     """Create a bar chart for counts of toxic comments"""
@@ -197,7 +249,8 @@ def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
         totals,
         title="Breakdown of toxic comments by type",
         values="Count",
-        names=totals.index
+        names=totals.index,
+        hole=.3
     )
     return  dbc.Card([dbc.CardBody([
         dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)

@@ -17,7 +17,7 @@ THEME = dbc.themes.UNITED
 
 app = Dash(
     __name__,
-    external_stylesheets=[THEME],
+    external_stylesheets=[THEME, dbc.icons.FONT_AWESOME],
     suppress_callback_exceptions=True
 )
 
