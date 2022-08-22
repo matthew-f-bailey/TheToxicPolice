@@ -22,7 +22,8 @@ def save_csv_to_s3(
     path: str,
     date_partition: bool = False
 ):
-    """Saves the file to s3, appends timestamp, casts to string
+    """
+    Saves the file to s3, appends timestamp, casts to string
 
     Args:
         contents (list): Contents of the file
@@ -66,6 +67,8 @@ def save_csv_to_s3(
 
 
 def save_to_dynamo(data: List[dict], table_name: str):
+    """
+    """
     db = session.client('dynamodb', region_name='us-east-1')
     # Convert to dynamo formatting
     serializer = TypeSerializer()
@@ -82,21 +85,32 @@ def save_to_dynamo(data: List[dict], table_name: str):
             raise e
     print(f'Saved {len(data)} records to dynamo table {table_name}')
 
+def stream_to_kinesis_praw(data: List[dict]):
+
+    stream_name = 'PUT_PRAW'
+    kinesis = session.client('kinesis')
+    for item in data:
+        kinesis.put_record(
+            StreamName=stream_name,
+            Data=json.dumps(item)
+        )
+
 if __name__=='__main__':
+    pass
     #Creating Session With Boto3.
-    db = session.resource('dynamodb', region_name='us-east-1')
-    table = db.Table('reddit_comments')
-    for _ in range(10):
-        if not table.global_secondary_indexes or table.global_secondary_indexes[0]['IndexStatus'] != 'ACTIVE':
-            print('Waiting for index backfill')
-            time.sleep(3)
-            table.reload()
-            continue
-        table.reload()
-        break
-    resp = table.query(
-        IndexName='subreddit_name_prefixed-index',
-        KeyConditionExpression=Key('subreddit_name_prefixed').eq('r/formula1')
-    )
-    for item in resp['Items']:
-        print(f'{item.get("subreddit_name_prefixed")} - {item.get("body")}')
+    # db = session.resource('dynamodb', region_name='us-east-1')
+    # table = db.Table('reddit_comments')
+    # for _ in range(10):
+    #     if not table.global_secondary_indexes or table.global_secondary_indexes[0]['IndexStatus'] != 'ACTIVE':
+    #         print('Waiting for index backfill')
+    #         time.sleep(3)
+    #         table.reload()
+    #         continue
+    #     table.reload()
+    #     break
+    # resp = table.query(
+    #     IndexName='subreddit_name_prefixed-index',
+    #     KeyConditionExpression=Key('subreddit_name_prefixed').eq('r/formula1')
+    # )
+    # for item in resp['Items']:
+    #     print(f'{item.get("subreddit_name_prefixed")} - {item.get("body")}')

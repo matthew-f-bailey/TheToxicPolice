@@ -1,12 +1,109 @@
-import json
+import os
 import praw
 import time
-
+import json
+import boto3
+from typing import List
 from prawcore.exceptions import ServerError
 from decimal import Decimal
+from dotenv import load_dotenv
+import csv
 
-import settings
-from aws import save_csv_to_s3, save_to_dynamo
+import io
+
+from datetime import datetime
+
+from boto3.dynamodb.types import TypeSerializer
+from boto3.dynamodb.conditions import Key
+
+import os
+
+# Need root to run in debug in vscode - shouldn't hurt otherwise
+load_dotenv()
+
+# Load in ENV FILE
+REDDIT_USERNAME: str = os.environ.get('REDDIT_USERNAME')
+REDDIT_PASSWORD: str = os.environ.get('REDDIT_PASSWORD')
+REDDIT_SECRET: str = os.environ.get('REDDIT_SECRET')
+REDDIT_CLIENT_ID: str = os.environ.get('REDDIT_CLIENT_ID')
+
+AWS_ACCESS_KEY: str = os.environ.get('AWS_ACCESS_KEY')
+AWS_SECRET_KEY: str = os.environ.get('AWS_SECRET_KEY')
+S3_BUCKET_NAME: str = os.environ.get('S3_BUCKET_NAME')
+
+session = boto3.Session(
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY
+)
+
+def save_csv_to_s3(
+    data: List[dict],
+    path: str,
+    date_partition: bool = False
+):
+    """
+    Saves the file to s3, appends timestamp, casts to string
+
+    Args:
+        contents (list): Contents of the file
+        filename (str): Core filename, will get timestamp
+    """
+
+    def date_partition_name(name):
+        now = datetime.now()
+        year, month, day = now.year, now.month, now.day
+        path = f"{year}/{month}/{day}/{name}.csv"
+        return path
+
+    path_processor = date_partition_name if date_partition else lambda x: f'{x}.csv'
+
+    #Creating Session With Boto3.
+    session = boto3.Session(
+        aws_access_key_id=AWS_ACCESS_KEY,
+        aws_secret_access_key=AWS_SECRET_KEY
+    )
+    #Creating S3 Resource From the Session.
+    s3 = session.resource('s3', region_name='us-east-1')
+
+    # Write csv content to string buffer to save
+    headers = set()
+    for item in data:
+        for key in item.keys():
+            headers.add(key)
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, list(headers), quoting=csv.QUOTE_ALL)
+    writer.writerow({k:k for k in headers})
+    writer.writerows(data)
+
+    print(f"Saving {len(data)} records to bucket {S3_BUCKET_NAME}")
+
+    obj = s3.Object(
+        bucket_name=S3_BUCKET_NAME,
+        key=path_processor(path)
+    )
+    obj.put(Body=output.getvalue())
+
+
+def save_to_dynamo(data: List[dict], table_name: str):
+    """
+    """
+    db = session.client('dynamodb', region_name='us-east-1')
+    # Convert to dynamo formatting
+    serializer = TypeSerializer()
+    serialze = serializer.serialize
+    data = [{k: serialze(v) for k,v in x.items()} for x in data]
+    for item in data:
+        try:
+            db.put_item(
+                TableName=table_name,
+                Item=item
+            )
+        except Exception as e:
+            print(json.dumps(item, indent=3))
+            raise e
+    print(f'Saved {len(data)} records to dynamo table {table_name}')
+
 
 
 def extract_info(obj) -> dict:
@@ -31,10 +128,10 @@ class RedditDownloader:
                  post_limit: int = 50) -> None:
 
         self.reddit = praw.Reddit(
-            client_id=settings.REDDIT_CLIENT_ID,
-            client_secret=settings.REDDIT_SECRET,
-            password=settings.REDDIT_PASSWORD,
-            username=settings.REDDIT_USERNAME,
+            client_id=REDDIT_CLIENT_ID,
+            client_secret=REDDIT_SECRET,
+            password=REDDIT_PASSWORD,
+            username=REDDIT_USERNAME,
             user_agent="Some User Agent"
         )
         self.sub_data = []
@@ -200,7 +297,13 @@ class RedditDownloader:
 
 if __name__=='__main__':
 
-    downloader = RedditDownloader(subs='AmItheAsshole')
+    sub = os.getenv('SUBREDDIT')
+    if not sub:
+        raise ValueError('SUBREDDIT env var needs to be defined')
+    sub = sub.replace('r/', '') # Just in case I forget later
+    print("Gathering posts for", sub)
+
+    downloader = RedditDownloader(subs=sub, post_limit=2)
     downloader.pull_data()
 
     save_csv_to_s3(
