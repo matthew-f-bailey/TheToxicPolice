@@ -27,8 +27,8 @@ REDDIT_PASSWORD: str = os.environ.get('REDDIT_PASSWORD')
 REDDIT_SECRET: str = os.environ.get('REDDIT_SECRET')
 REDDIT_CLIENT_ID: str = os.environ.get('REDDIT_CLIENT_ID')
 
-AWS_ACCESS_KEY: str = os.environ.get('AWS_ACCESS_KEY')
-AWS_SECRET_KEY: str = os.environ.get('AWS_SECRET_KEY')
+AWS_ACCESS_KEY: str = os.environ.get('ACCESS_KEY_AWS')
+AWS_SECRET_KEY: str = os.environ.get('SECRET_KEY_AWS')
 S3_BUCKET_NAME: str = os.environ.get('S3_BUCKET_NAME')
 
 session = boto3.Session(
