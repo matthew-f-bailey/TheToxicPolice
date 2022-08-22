@@ -205,7 +205,7 @@ def get_toxic_count_cards(comment_data: list) -> list:
                         H1(count, className='display-1'),
                         Span([
                             I(className=icon, style={'color': color}),
-                            Span(' '+label, style={'font-size': '18px'}),
+                            Span(' '+label, style={'font-size': '20px'}),
                         ], className='d-inline')
                     ], class_name=f'text-center {FILL_PARENT_BS_CLASS}'),
                 ], class_name=FILL_PARENT_BS_CLASS),
