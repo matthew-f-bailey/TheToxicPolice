@@ -84,6 +84,8 @@ def save_csv_to_s3(
     )
     obj.put(Body=output.getvalue())
 
+    return len(data)
+
 
 def save_to_dynamo(data: List[dict], table_name: str):
     """
@@ -103,7 +105,7 @@ def save_to_dynamo(data: List[dict], table_name: str):
             print(json.dumps(item, indent=3))
             raise e
     print(f'Saved {len(data)} records to dynamo table {table_name}')
-
+    return len(data)
 
 
 def extract_info(obj) -> dict:
@@ -295,42 +297,80 @@ class RedditDownloader:
 
         self.sub_data = normalized
 
-if __name__=='__main__':
 
-    sub = os.getenv('SUBREDDIT')
+
+def handler(event, context):
+
+    details = event['detail']
+    sub = details.get('subreddit')
     if not sub:
         raise ValueError('SUBREDDIT env var needs to be defined')
+    post_limit = details.get('post_limit', 50)
+
     sub = sub.replace('r/', '') # Just in case I forget later
     print("Gathering posts for", sub)
 
-    downloader = RedditDownloader(subs=sub, post_limit=2)
+    downloader = RedditDownloader(subs=sub, post_limit=post_limit)
     downloader.pull_data()
 
-    save_csv_to_s3(
+    saved_to_s3 = dict()
+    saved_to_dyanmo = dict()
+
+    saved_to_s3['comments'] = save_csv_to_s3(
         data=downloader.comment_data,
         path='comments',
         date_partition=True
     )
-    save_csv_to_s3(
+
+    saved_to_s3['posts'] = save_csv_to_s3(
         data=downloader.post_data,
         path='posts',
         date_partition=True
     )
-    save_csv_to_s3(
+
+    saved_to_s3['subs'] = save_csv_to_s3(
         data=downloader.sub_data,
         path='subs',
         date_partition=True
     )
 
-    save_to_dynamo(
+    saved_to_dyanmo['comments'] = save_to_dynamo(
         data=downloader.comment_data,
         table_name='reddit_comments'
     )
-    save_to_dynamo(
+    saved_to_dyanmo['posts'] = save_to_dynamo(
         data=downloader.post_data,
         table_name='reddit_posts'
     )
-    save_to_dynamo(
+    saved_to_dyanmo['subs'] = save_to_dynamo(
         data=downloader.sub_data,
         table_name='reddit_subs'
     )
+
+    resp_body = dict(
+        s3=saved_to_s3,
+        dyanmo=saved_to_dyanmo,
+    )
+
+    return {
+        'statusCode': 200,
+        'body': resp_body
+    }
+
+if __name__=='__main__':
+    print(handler(None, None))
+
+#! Cloudwatch Event to Lambda
+# {
+#     "version": "0",
+#     "id": "53dc4d37-cffa-4f76-80c9-8b7d4a4d2eaa",
+#     "detail-type": "Scheduled Event",
+#     "source": "aws.events",
+#     "account": "123456789012",
+#     "time": "2015-10-08T16:53:06Z",
+#     "region": "us-east-1",
+#     "resources": [
+#         "arn:aws:events:us-east-1:123456789012:rule/my-scheduled-rule"
+#     ],
+#     "detail": {}
+# }
