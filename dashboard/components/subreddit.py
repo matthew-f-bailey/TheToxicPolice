@@ -1,18 +1,18 @@
 import logging
+from datetime import datetime, timezone
 
-from dash import Input, Output, callback, clientside_callback
-from dash.dcc import Dropdown
-from dash.html import Div, P, H1, H2, H5, A, I, Span
-from dash import dcc
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+from dash import dcc, Input, Output, callback
+from dash.dcc import Dropdown
+from dash.html import Div, P, H1, H2, H5, A, I, Span
 
 from aws.dynamo import get_all_subs, query_comments_by_subreddit_past_day
-from settings import COLORS
-from themes import plotly_theme
 from components.errors import no_content_error_message
+from settings import COLORS
 from settings import PLOTLY_TEMPLATE
+from themes import plotly_theme  # Caution: Needed even though not used
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 SUBS = get_all_subs()
 FILL_PARENT_BS_CLASS = 'h-100 mx-sm pb-sm'
 TOXIC_THRESH = 0.6
+
 
 def subreddit():
     """
@@ -35,7 +36,7 @@ def subreddit():
             Div(id='subreddit_content', children=[], style={'height': '85vh'})
         ])
 
-def get_sub_desc(subreddit_name):
+def get_sub_desc(subreddit_name: str, last_updated: str):
     """Update the sub description from the pulled in sub list"""
     the_sub = [x for x in SUBS if x['display_name_prefixed']==subreddit_name][0]
     desc = the_sub['public_description']
@@ -51,13 +52,26 @@ def get_sub_desc(subreddit_name):
                         text_color=COLORS.WHITE,
                         className="border me-1",
                         pill=True
-                    )
-                ])
+                    ),
+                ]),
+                Span(f"Last updated: {last_updated}")
             ], width='auto'),
             dbc.Col([desc], width='auto')
         ])
     ])
 
+def get_last_updated(comments: list) -> str:
+    """From all the comments. find the most recent one"""
+    create_dates = [
+        comment.get('created_utc')
+        for comment
+        in comments
+    ]
+    if not create_dates:
+        return "More than 24 hours ago"
+    latest = int(max(create_dates))
+    latest_time = datetime.utcfromtimestamp(latest)
+    return str(latest_time) + ' utc'
 
 @callback(
     Output(component_id='subreddit_content', component_property='children'),
@@ -70,8 +84,9 @@ def update_content(subreddit_name: str):
     the other componenets we need to udpate.
     Updates the content section and tirggers when a sub is selected
     """
-    desc = get_sub_desc(subreddit_name)
     comment_data = query_comments_by_subreddit_past_day(subreddit_name)
+    last_updated = get_last_updated(comment_data)
+    desc = get_sub_desc(subreddit_name, last_updated)
 
     if not comment_data:
         return no_content_error_message(), desc

@@ -100,14 +100,14 @@ def query_comments_by_subreddit(subreddit: str) -> pd.DataFrame:
     logger.info(f'Dyanmo comment query to subreddit of {subreddit} returned {len(items)} results')
     return items
 
-def query_comments_by_subreddit_past_day(subreddit: str) -> pd.DataFrame:
+def query_comments_by_subreddit_past_day(subreddit: str) -> list:
     """Given a subreddit, return all the comments we have for it
 
     Args:
         subreddit (str): subreddit name including the r/ prefix
 
     Returns:
-        pd.DataFrame: Dataframe containing the comments
+        list: The comments returned from dynamo
     """
 
     today = round(datetime.timestamp(datetime.now()))
