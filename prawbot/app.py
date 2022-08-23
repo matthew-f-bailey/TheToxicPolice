@@ -348,6 +348,7 @@ def handler(event, context):
     )
 
     resp_body = dict(
+        subreddit=sub,
         s3=saved_to_s3,
         dyanmo=saved_to_dyanmo,
     )
