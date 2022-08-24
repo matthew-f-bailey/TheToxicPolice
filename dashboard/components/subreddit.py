@@ -108,13 +108,10 @@ def update_content(subreddit_name: str):
     # Second row
     second_row = dbc.Row(children=[], class_name='h-50')
     second_row.children.append(
+        dbc.Col(get_score_box_charts(df), md=8, class_name=FILL_PARENT_BS_CLASS)
+    )
+    second_row.children.append(
         dbc.Col(create_pie_toxicity_type(df), md=4, class_name=FILL_PARENT_BS_CLASS)
-    )
-    second_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
-    )
-    second_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     children.append(second_row)
 
@@ -267,6 +264,40 @@ def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
         names=totals.index,
         hole=.3
     )
+    return  dbc.Card([dbc.CardBody([
+        dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
+    ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)
+
+def get_score_box_charts(comments: pd.DataFrame):
+
+    # Take only toxic comments
+    all_toxic = comments.copy()[
+        (comments['toxic']==1) |
+        (comments['severe_toxic']==1) |
+        (comments['obscene']==1) |
+        (comments['threat']==1) |
+        (comments['insult']==1) |
+        (comments['identity_hate']==1)
+    ]
+    toxic_cols = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
+    all_toxic['total_toxic'] = all_toxic[toxic_cols].sum(axis=1)
+
+    def toxic_cat(row):
+        """Define which toxic type they are, or multiple"""
+        if row['total_toxic'] > 1:
+            return 'Multiple'
+        for col in toxic_cols:
+            if row[col]:
+                return col.replace('_', ' ').title()
+
+    all_toxic['toxic_cat'] = all_toxic.apply(toxic_cat, axis=1)
+
+    fig = px.box(all_toxic, x='score', y='toxic_cat', color='toxic_cat',
+                 title='Score by Toxicity Type', labels={"toxic_cat": "Category", "score": "Score"})
+    fig.update_layout(legend_title_text='Toxicity Category')
+    trace = list(px.scatter(all_toxic, x='score', y='toxic_cat', color='toxic_cat').select_traces())
+    [trace[i].update(showlegend=False) for i in range(7)] # oof
+    fig.update_traces(orientation='h')
     return  dbc.Card([dbc.CardBody([
         dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
     ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)
