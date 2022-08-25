@@ -21,9 +21,9 @@ def body():
     giving options to do so
     """
     return \
-        Div(style={'backgroundColor': COLORS.BG_GREY}, children=[
+        Div(style={'backgroundColor': COLORS.BLACK}, children=[
             dbc.Row(
-                dbc.Navbar(dark=True, color=COLORS.WHITE, children=[
+                dbc.Navbar(dark=True, color=COLORS.BLACK, children=[
                     dbc.Tabs(id='tab_switch', active_tab=SUBREDDIT, style={'backgroundColor': COLORS.BLUE}, children=[
                         dbc.Tab(label=OVERVIEW, tab_id=OVERVIEW, active_label_style={"color": COLORS.RED}),
                         dbc.Tab(label=SUBREDDIT, tab_id=SUBREDDIT, active_label_style={"color": COLORS.RED})

@@ -13,7 +13,7 @@ from settings import COLORS
 
 # Load all subs available upon startup
 
-THEME = dbc.themes.UNITED
+THEME = dbc.themes.CYBORG
 
 app = Dash(
     __name__,

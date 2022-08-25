@@ -11,9 +11,8 @@ from dash.html import Div, P, H1, H2, H5, A, I, Span
 from aws.dynamo import get_all_subs, query_comments_by_subreddit_past_day
 from components.errors import no_content_error_message
 from settings import COLORS
-from settings import PLOTLY_TEMPLATE
 from themes import plotly_theme  # Caution: Needed even though not used
-
+from settings import PLOTLY_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -38,25 +37,32 @@ def subreddit():
 
 def get_sub_desc(subreddit_name: str, last_updated: str):
     """Update the sub description from the pulled in sub list"""
+
+    w1 = 10
+    w2 = 2
+    if len(subreddit_name) > 13:
+        w1=9
+        w2=3
+
     the_sub = [x for x in SUBS if x['display_name_prefixed']==subreddit_name][0]
     desc = the_sub['public_description']
     if not desc:
         desc = 'No publc subreddit description available'
-    return dbc.Card([
-        dbc.Row([
+    return dbc.Card(style={'background-color': 'rgb(0,0,0)'}, children=[
+        dbc.Row(class_name='dashrow', children=[
             dbc.Col([
                 H2([
                     dbc.Badge(
                         subreddit_name,
                         color=COLORS.RED,
                         text_color=COLORS.WHITE,
-                        className="border me-1",
+                        className="me-1",
                         pill=True
                     ),
                 ]),
                 Span(f"Last updated: {last_updated}")
-            ], width='auto'),
-            dbc.Col([desc], width='auto')
+            ], md=w2),
+            dbc.Col([desc], md=w1, class_name='blockquote')
         ])
     ])
 
@@ -96,7 +102,7 @@ def update_content(subreddit_name: str):
     children = []
 
     # Top Row
-    top_row = dbc.Row(children=[], class_name='h-25')
+    top_row = dbc.Row(children=[], class_name='h-25 dashrow')
     top_row.children.append(
         dbc.Col(get_top_toxic_cards(comment_data), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
@@ -106,7 +112,7 @@ def update_content(subreddit_name: str):
     children.append(top_row)
 
     # Second row
-    second_row = dbc.Row(children=[], class_name='h-50')
+    second_row = dbc.Row(children=[], class_name='h-50 dashrow')
     second_row.children.append(
         dbc.Col(get_score_box_charts(df), md=8, class_name=FILL_PARENT_BS_CLASS)
     )
@@ -116,7 +122,7 @@ def update_content(subreddit_name: str):
     children.append(second_row)
 
     # Third row
-    third_row = dbc.Row(children=[], class_name='h-25')
+    third_row = dbc.Row(children=[], class_name='h-25 dashrow')
     third_row.children.append(
         dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
@@ -262,7 +268,8 @@ def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
         title="Breakdown of toxic comments by type",
         values="Count",
         names=totals.index,
-        hole=.3
+        hole=.6,
+        template=PLOTLY_TEMPLATE
     )
     fig.update_layout(margin=dict(l=10, r=10, t=40, b=10))
     return  dbc.Card([dbc.CardBody([
@@ -294,7 +301,8 @@ def get_score_box_charts(comments: pd.DataFrame):
     all_toxic['toxic_cat'] = all_toxic.apply(toxic_cat, axis=1)
 
     fig = px.box(all_toxic, x='score', y='toxic_cat', color='toxic_cat', boxmode="overlay",
-                 title='Score by Toxicity Type', labels={"toxic_cat": "Category", "score": "Score"})
+                 title='Score by Toxicity Type', labels={"toxic_cat": "Category", "score": "Score"},
+                 template=PLOTLY_TEMPLATE)
     fig.update_layout(legend_title_text='Toxicity Category', boxgap=0.2, boxgroupgap=0.2, margin=dict(l=0, r=0, t=40, b=0))
     fig.update_traces(orientation='h')
     trace = list(px.scatter(all_toxic, x='score', y='toxic_cat', color='toxic_cat').select_traces())
