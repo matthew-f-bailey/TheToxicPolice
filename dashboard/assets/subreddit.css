@@ -1,0 +1,8 @@
+.counter {
+    animation: counter-anim 1s normal;
+}
+
+@keyframes counter-anim {
+    0%   {background: rgb(236, 236, 236);}
+    100% {background: white;}
+}

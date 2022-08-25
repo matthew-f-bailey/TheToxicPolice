@@ -214,7 +214,7 @@ def get_toxic_count_cards(comment_data: list) -> list:
             dbc.Col(class_name=FILL_PARENT_BS_CLASS, children=[
                 dbc.Card(children=[
                     dbc.CardBody(children=[
-                        H1(count, className='display-1'),
+                        H1(count, className='display-1 counter', id=f"data-{count}"),
                         Span([
                             I(className=icon, style={'color': color}),
                             Span(' '+label, style={'font-size': '20px'}),
@@ -264,6 +264,7 @@ def create_pie_toxicity_type(comment_df: pd.DataFrame) -> dcc.Graph:
         names=totals.index,
         hole=.3
     )
+    fig.update_layout(margin=dict(l=10, r=10, t=40, b=10))
     return  dbc.Card([dbc.CardBody([
         dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
     ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)
@@ -294,7 +295,7 @@ def get_score_box_charts(comments: pd.DataFrame):
 
     fig = px.box(all_toxic, x='score', y='toxic_cat', color='toxic_cat', boxmode="overlay",
                  title='Score by Toxicity Type', labels={"toxic_cat": "Category", "score": "Score"})
-    fig.update_layout(legend_title_text='Toxicity Category', boxgap=0.2, boxgroupgap=0.2)
+    fig.update_layout(legend_title_text='Toxicity Category', boxgap=0.2, boxgroupgap=0.2, margin=dict(l=0, r=0, t=40, b=0))
     fig.update_traces(orientation='h')
     trace = list(px.scatter(all_toxic, x='score', y='toxic_cat', color='toxic_cat').select_traces())
     for i in range(7):
