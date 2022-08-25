@@ -44,6 +44,8 @@ def _mock_toxicness(items: list) -> list:
             if percent > 1:
                 percent = 1
             item[label] = percent
+            if item['score'] > 100:
+                item['score'] = 100
         new_items.append(item)
     return new_items
 
