@@ -296,7 +296,11 @@ def get_score_box_charts(comments: pd.DataFrame):
                  title='Score by Toxicity Type', labels={"toxic_cat": "Category", "score": "Score"})
     fig.update_layout(legend_title_text='Toxicity Category')
     trace = list(px.scatter(all_toxic, x='score', y='toxic_cat', color='toxic_cat').select_traces())
-    [trace[i].update(showlegend=False) for i in range(7)] # oof
+    for i in range(7):
+        try:
+            trace[i].update(showlegend=False)
+        except IndexError:
+            pass
     fig.update_traces(orientation='h')
     return  dbc.Card([dbc.CardBody([
         dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
