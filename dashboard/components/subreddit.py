@@ -318,7 +318,7 @@ def num_comments_by_hour(comments: pd.DataFrame):
     """
     df = comments.copy()
     current_hour = datetime.utcnow().hour + 1
-    print(current_hour)
+
     def get_hour(row):
         created = datetime.utcfromtimestamp(row['created_utc'])
         return created.hour
