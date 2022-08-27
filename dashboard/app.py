@@ -23,8 +23,7 @@ app = Dash(
 
 app.layout = html.Div(className='container-fluid', children=[
     H1('Reddit Toxicity Dashboard'),
-    body(),
-    Markdown(get_markdown_file('footer'))
+    body()
 ])
 
 if __name__=='__main__':

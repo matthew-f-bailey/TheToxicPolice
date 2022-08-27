@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
-from dash import dcc, Input, Output, callback
+from dash import dcc, Input, Output, callback, dash_table
 from dash.dcc import Dropdown
 from dash.html import Div, P, H1, H2, H5, A, I, Span
 
@@ -60,7 +60,8 @@ def get_sub_desc(subreddit_name: str, last_updated: str):
                         pill=True
                     ),
                 ]),
-                Span(f"Last updated: {last_updated}")
+                Div(f"Last updated: {last_updated}"),
+                Div(f"Current time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} utc"),
             ], md=w2),
             dbc.Col([desc], md=w1, class_name='blockquote')
         ])
@@ -124,13 +125,10 @@ def update_content(subreddit_name: str):
     # Third row
     third_row = dbc.Row(children=[], class_name='h-25 dashrow')
     third_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
+        dbc.Col(num_comments_by_hour(df), md=4, class_name=FILL_PARENT_BS_CLASS)
     )
     third_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
-    )
-    third_row.children.append(
-        dbc.Col(create_toxic_count_bar(df), md=4, class_name=FILL_PARENT_BS_CLASS)
+        dbc.Col(show_raw_data(df), md=8, class_name=FILL_PARENT_BS_CLASS)
     )
     children.append(third_row)
     return (children, desc)
@@ -313,4 +311,47 @@ def get_score_box_charts(comments: pd.DataFrame):
             pass
     return  dbc.Card([dbc.CardBody([
         dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
+    ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)
+
+def num_comments_by_hour(comments: pd.DataFrame):
+    """Plots how many comments were made in each hour for the last day
+    """
+    df = comments.copy()
+    current_hour = datetime.utcnow().hour + 1
+    print(current_hour)
+    def get_hour(row):
+        created = datetime.utcfromtimestamp(row['created_utc'])
+        return created.hour
+    # Create hour column
+    df['hour'] = df.apply(get_hour, axis=1)
+    def get_hours_ago(row):
+        ago = (row['hour'] - current_hour)*-1
+        if ago<0:
+            ago = 24+ago # ago will be negative
+        return ((ago-23)*-1)+1 # Inverse the time steps so now is the last
+    df['hours_ago'] = df.apply(get_hours_ago, axis=1)
+
+    # Group on hour column
+    grouped = df.groupby(by='hours_ago').count()
+    grouped.rename(columns={'subreddit_id': 'count'}, inplace=True)
+    fig = px.line(
+        grouped,
+        y='count',
+        title='Total comments made in past 24 hours (from last update)',
+        labels={'count': 'Count', 'hours_ago': 'Hours Ago'},
+        template=PLOTLY_TEMPLATE
+    )
+    fig.update_xaxes(range=[24, 1])
+    fig.update_layout(margin=dict(l=0, r=10, t=40, b=5))
+    return  dbc.Card([dbc.CardBody([
+        dcc.Graph(figure=fig, className=FILL_PARENT_BS_CLASS)
+    ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)
+
+def show_raw_data(comments: pd.DataFrame):
+    table = dbc.Table.from_dataframe(comments.head(), striped=True, bordered=True, hover=True, responsive=True)
+    return  dbc.Card([dbc.CardBody([
+        Div(
+            table,
+            style={"maxHeight": "175px", "overflow": "scroll"},
+        ),
     ], className=FILL_PARENT_BS_CLASS)], className=FILL_PARENT_BS_CLASS)

@@ -24,9 +24,9 @@ def body():
         Div(style={'backgroundColor': COLORS.BLACK}, children=[
             dbc.Row(
                 dbc.Navbar(dark=True, color=COLORS.BLACK, children=[
-                    dbc.Tabs(id='tab_switch', active_tab=SUBREDDIT, style={'backgroundColor': COLORS.BLUE}, children=[
-                        dbc.Tab(label=OVERVIEW, tab_id=OVERVIEW, active_label_style={"color": COLORS.RED}),
-                        dbc.Tab(label=SUBREDDIT, tab_id=SUBREDDIT, active_label_style={"color": COLORS.RED})
+                    dbc.Tabs(id='tab_switch', active_tab=SUBREDDIT, children=[
+                        dbc.Tab(label=OVERVIEW, tab_id=OVERVIEW, class_name='disabled'),
+                        dbc.Tab(label=SUBREDDIT, tab_id=SUBREDDIT)
                     ])
                 ])
             ),

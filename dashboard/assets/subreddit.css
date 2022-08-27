@@ -13,3 +13,7 @@ body {
 .dashrow {
     margin: 8px;
 }
+
+:root {
+    color-scheme: dark;
+  }
